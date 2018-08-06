@@ -61,6 +61,7 @@ bool writeMakefile(const Makefile& makefile, const std::string& folder){
     return false;
 }
 
+#include <iostream>
 bool readGmake(const std::string& filepath, GmakeOptions& gmake){
     std::string line;
     std::ifstream file(filepath.c_str());
@@ -68,11 +69,14 @@ bool readGmake(const std::string& filepath, GmakeOptions& gmake){
         while(!file.eof()){
             std::getline(file, line);
             if(line!=""){
-                int sep = line.find(GmakeOptions::separator);
-                if(sep==-1){
-                    gmake.folders.push_back(trim(line));
-                } else{
-                    gmake.options[trim(line.substr(0, sep))] = trim(line.substr(sep+1));
+                line = trim(line);
+                if(line[0]!='#'){
+                    int sep = line.find(GmakeOptions::separator);
+                    if(sep==-1){
+                        gmake.folders.push_back(trim(line));
+                    } else{
+                        gmake.options[trim(line.substr(0, sep))] = trim(line.substr(sep+1));
+                    }
                 }
             }
         }
