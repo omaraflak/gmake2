@@ -1,0 +1,11 @@
+compiler = g++-8
+flags = -std=c++17 -lstdc++fs
+
+# executable name
+executable = gmake
+
+# output folder
+output = bin
+
+# folder where submakefiles should be created
+./root
