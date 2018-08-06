@@ -1,6 +1,7 @@
 #ifndef TOOLS
 #define TOOLS
 
+#include <set>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -12,6 +13,7 @@
 
 namespace fs = std::filesystem;
 
+static const std::string MAIN_FUNCT = "intmain(";
 static const std::string INCLUDE_STMT = "#include";
 static const std::string INCLUDE_L_DLMTR = "\"";
 static const std::string INCLUDE_R_DLMTR = "\"";
@@ -19,7 +21,9 @@ static const std::string INCLUDE_R_DLMTR = "\"";
 // filesystem helper
 std::vector<fs::path> listdir(const std::string& dir);
 std::vector<fs::path> filterPath(const std::vector<fs::path>& paths, const std::vector<std::string>& ext);
-bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps);
+bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps, bool* isMain=NULL);
+bool readFileDeepDependencies_(const std::string& filename, std::vector<std::string> &deps);
+bool readFileDeepDependencies(const std::string& filename, std::vector<std::string> &deps);
 bool writeMakefile(const Makefile& makefile, const std::string& folder);
 bool readGmake(const std::string& filepath, GmakeOptions& gmake);
 

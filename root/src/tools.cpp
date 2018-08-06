@@ -28,9 +28,13 @@ std::vector<fs::path> filterPath(const std::vector<fs::path>& paths, const std::
     return path;
 }
 
-bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps){
+bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps, bool* isMain){
     std::ifstream file(filename.c_str());
     if(file){
+        if(isMain!=NULL){
+            *isMain = false;
+        }
+
         std::string line;
         while(!file.eof()){
             getline(file, line);
@@ -43,11 +47,49 @@ bool readFileDependencies(const std::string& filename, std::vector<std::string> 
                     deps.push_back(dependency);
                 }
             }
+            else if(startWith(line, MAIN_FUNCT) && isMain!=NULL){
+                *isMain = true;
+            }
         }
         file.close();
         return true;
     }
     return false;
+}
+
+bool readFileDeepDependencies_(const std::string& filename, std::vector<std::string> &deps){
+    std::vector<std::string> d;
+    if(!readFileDependencies(filename, d))
+        return false;
+
+    // change directory if needed
+    std::string parent = fs::path(filename).parent_path().string();
+    if(parent!=""){
+        fs::current_path(parent);
+    }
+
+    // relative to canonical & add new dependencies
+    for(std::string& path : d){
+        path = fs::canonical(path);
+        if(!contains(deps, path)){
+            deps.push_back(path);
+        }
+    }
+
+    // make it recursive...
+    for(const std::string& file : d){
+        if(!readFileDeepDependencies(file, deps))
+            return false;
+    }
+
+    return true;
+}
+
+bool readFileDeepDependencies(const std::string& filename, std::vector<std::string> &deps){
+    fs::path root = fs::current_path();
+    bool result = readFileDeepDependencies_(filename, deps);
+    fs::current_path(root);
+    return result;
 }
 
 bool writeMakefile(const Makefile& makefile, const std::string& folder){
@@ -61,7 +103,6 @@ bool writeMakefile(const Makefile& makefile, const std::string& folder){
     return false;
 }
 
-#include <iostream>
 bool readGmake(const std::string& filepath, GmakeOptions& gmake){
     std::string line;
     std::ifstream file(filepath.c_str());
