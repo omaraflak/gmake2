@@ -16,15 +16,18 @@ static const std::string INCLUDE_STMT = "#include";
 static const std::string INCLUDE_L_DLMTR = "\"";
 static const std::string INCLUDE_R_DLMTR = "\"";
 
+// filesystem helper
 std::vector<fs::path> listdir(const std::string& dir);
 std::vector<fs::path> filterPath(const std::vector<fs::path>& paths, const std::vector<std::string>& ext);
+bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps);
+bool writeMakefile(const Makefile& makefile, const std::string& folder);
 bool readGmake(const std::string& filepath, GmakeOptions& gmake);
+
+// string operations
 bool startWith(const std::string& str, const std::string& sub);
 bool endWith(const std::string& str, const std::string& sub);
 void eraseAll(std::string &str, const std::string& sub);
 std::string trim(const std::string& str);
-bool readFileDependencies(const std::string& filename, std::vector<std::string> &deps);
-bool writeMakefile(const Makefile& makefile, const std::string& folder);
 
 template<typename T>
 bool contains(const std::vector<T> &v, const T& value){
