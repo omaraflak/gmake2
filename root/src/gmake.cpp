@@ -1,12 +1,42 @@
 #include <iostream>
 #include <fstream>
+#include <utility>
+#include <map>
 
 #include "../include/makefile.h"
 #include "../include/argument.h"
 #include "../include/tools.h"
 
 static const std::string GMAKE = ".gmake";
+static const std::string OBJ = "obj";
 static const std::vector<std::string> EXT_SRC = {".cpp", ".c++", ".cxx", ".cp", ".cc", ".c"};
+
+bool getMainDependencies(const std::string& filename, const std::vector<std::string>& rootFolder, std::vector<std::pair<std::string, std::string> >& objs, std::vector<std::string>& deps){
+    std::vector<std::string> sources;
+    if(!readFileDeepDependencies(filename, sources)){
+        return false;
+    }
+
+    sources.push_back(filename);
+
+    for(const std::string& src : sources){
+        for(const std::string root : rootFolder){
+            std::string rootCan = fs::canonical(root);
+            if(startWith(src, rootCan)){
+                std::string filename = fs::path(src).stem().string()+".o";
+                fs::path objPath = fs::path(root).filename()/OBJ/filename;
+                if(fs::exists(objPath)){
+                    objs.push_back(std::make_pair(root, OBJ+"/"+filename));
+                }
+                else{
+                    deps.push_back(root/fs::relative(src, root));
+                }
+            }
+        }
+    }
+
+    return true;
+}
 
 std::vector<std::string> getObjs(const std::vector<fs::path>& src, const std::string& folder){
     std::vector<std::string> objs;
@@ -16,7 +46,7 @@ std::vector<std::string> getObjs(const std::vector<fs::path>& src, const std::st
     return objs;
 }
 
-bool generate(){
+bool processCurrentPath(){
     // read options in .gmake file
     GmakeOptions gmake;
     readGmake(GMAKE, gmake);
@@ -25,11 +55,15 @@ bool generate(){
     std::map<std::string, std::string> options = gmake.options;
     fs::path root = fs::current_path();
 
+    // main() files
+    std::vector<std::string> mains;
+    bool isMain;
+
     // generate submakefiles
     for(const std::string& folder : folders){
         Makefile makefile;
         makefile.addVar("CC", options["compiler"]);
-        makefile.addVar("ODIR", "obj");
+        makefile.addVar("ODIR", OBJ);
         makefile.addVar("CXXFLAGS", options["flags"]);
 
         // move to folder
@@ -55,7 +89,10 @@ bool generate(){
 
             // get all includes from file
             std::vector<std::string> dependencies = {filename};
-            readFileDependencies(filename, dependencies);
+            readFileDependencies(filename, dependencies, &isMain);
+            if(isMain){
+                mains.push_back(fs::canonical(filename));
+            }
 
             // set relative path to absolute path
             for(std::string& dep : dependencies){
@@ -88,23 +125,67 @@ bool generate(){
     makefile.addVar("CC", options["compiler"]);
     makefile.addVar("BIN", options["output"]);
     makefile.addVar("CXXFLAGS", options["flags"]);
-    makefile.addVar("PROG", options["executable"]);
-    makefile.addVar("SUBMAKEFILES", "submakefiles");
 
-    // build folders related lines
-    std::vector<std::string> objs, makeSub, cleanSub;
+    // set executable name
+    std::vector<std::string> mainsName;
+    for(const std::string& m : mains){
+        fs::path p(m);
+        options[p.filename()] = p.stem();
+        mainsName.push_back(p.stem());
+    }
+
+    // entry command
+    makefile.addRule("all", mainsName, {});
+
+    // entry for each main()
+    for(const std::string& m : mains){
+        std::vector<std::pair<std::string, std::string> > objs;
+        std::vector<std::string> deps, deps2, actions;
+        if(!getMainDependencies(m, folders, objs, deps)){
+            return false;
+        }
+
+        // dependent files
+        deps2.push_back("$(BIN)");
+        deps2.insert(deps2.end(), deps.begin(), deps.end());
+
+        std::map<std::string, std::vector<std::string> > submakeParam;
+        for(const auto& o : objs){
+            std::string root = o.first;
+            std::string obj = o.second;
+            submakeParam[root].push_back(obj);
+        }
+
+        for(const auto& p : submakeParam){
+            std::stringstream ss;
+            ss << "$(MAKE) -C " << p.first << " " << OBJ << " ";
+            for(const std::string& s : p.second){
+                ss << s << " ";
+            }
+            actions.push_back(ss.str());
+        }
+
+        // object to compile
+        std::string objs_m = "OBJS_"+toUpper(fs::path(m).filename().stem());
+        std::vector<std::string> objs_compile;
+        for(const auto& o : objs){
+            objs_compile.push_back(fs::path(o.first)/o.second);
+        }
+        makefile.addArray(objs_m, objs_compile);
+
+        actions.push_back("$(CC) -o $(BIN)/$@ $("+objs_m+") $(CXXFLAGS)");
+        makefile.addRule(fs::path(m).stem(), deps2, actions);
+    }
+
+    // mkdir bin
+    makefile.addRule("$(BIN)", {}, {"if [ ! -d $(BIN) ]; then mkdir $(BIN); fi"});
+
+    // clean
+    std::vector<std::string> cleanSub;
     for(const std::string& folder : folders){
-        objs.push_back("$(wildcard "+folder+"/obj/*.o)");
-        makeSub.push_back("$(MAKE) -C "+folder);
         cleanSub.push_back("$(MAKE) -C "+folder+" clean");
     }
     cleanSub.push_back("if [ -d $(BIN) ]; then rm $(BIN) -r; fi");
-
-    // write all
-    makefile.addArray("OBJS", objs);
-    makefile.addRule("$(PROG)", {"$(BIN)", "$(SUBMAKEFILES)"}, {"$(CC) -o $(BIN)/$@ $(OBJS) $(CXXFLAGS)"});
-    makefile.addRule("$(BIN)", {}, {"if [ ! -d $(BIN) ]; then mkdir $(BIN); fi"});
-    makefile.addPhony("$(SUBMAKEFILES)", makeSub);
     makefile.addPhony("clean", cleanSub);
 
     // create main makefile
@@ -140,7 +221,7 @@ int main(int argc, char const *argv[]) {
     }
     else {
         if(fs::exists(GMAKE)){
-            if(generate()){
+            if(processCurrentPath()){
                 std::cout << "Done." << std::endl;
             }
             else{
