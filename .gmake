@@ -2,7 +2,7 @@ compiler = g++-8
 flags = -std=c++17 -lstdc++fs
 
 # executable name
-executable = gmake
+gmake.cpp = gmake
 
 # output folder
 output = bin
