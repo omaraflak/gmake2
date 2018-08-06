@@ -18,7 +18,7 @@ class Makefile {
         void addVar(const std::string& name, const std::string& value);
         void addArray(const std::string& name, const std::vector<std::string>& values);
         void addRule(const std::string& name, const std::vector<std::string>& dependencies, const std::vector<std::string>& actions);
-        void addPhony(const std::string& name, const std::vector<std::string>& actions);
+        void addPhony(const std::string& name);
         std::string build() const;
 };
 
