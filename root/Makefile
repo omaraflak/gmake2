@@ -1,7 +1,6 @@
 CC = g++-8
 ODIR = obj
 CXXFLAGS = -std=c++17 -lstdc++fs
-
 OBJS = $(ODIR)/gmake.o $(ODIR)/argument.o $(ODIR)/tools.o $(ODIR)/makefile.o 
 
 all : $(ODIR) $(OBJS) 
@@ -21,9 +20,9 @@ $(ODIR)/makefile.o : src/makefile.cpp include/makefile.h
 $(ODIR) : 
 	if [ ! -d $(ODIR) ]; then mkdir $(ODIR); fi
 
-
-.PHONY : clean
 clean : 
 	if [ -d $(ODIR) ]; then rm $(ODIR) -r; fi
 
+.PHONY : all
+.PHONY : clean
 
