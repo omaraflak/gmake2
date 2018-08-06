@@ -22,4 +22,4 @@ clean :
 
 .PHONY : install
 install :
-	sudo cp gmake /bin/gmake
+	sudo cp $(BIN)/$(PROG) /bin/$(PROG)
