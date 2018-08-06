@@ -143,6 +143,14 @@ void eraseAll(std::string &str, const std::string& sub){
     }
 }
 
+std::string toUpper(const std::string& str){
+    std::locale loc;
+    std::stringstream ss;
+    for (std::string::size_type i=0; i<str.length(); ++i)
+        ss << std::toupper(str[i],loc);
+    return ss.str();
+}
+
 std::string trim(const std::string& str){
     int start = str.find_first_not_of(' ');
     int end = str.find_last_not_of(' ');

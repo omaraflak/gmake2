@@ -2,8 +2,10 @@
 #define TOOLS
 
 #include <set>
+#include <locale>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <algorithm>
 #include <filesystem>
@@ -32,6 +34,7 @@ bool startWith(const std::string& str, const std::string& sub);
 bool endWith(const std::string& str, const std::string& sub);
 void eraseAll(std::string &str, const std::string& sub);
 std::string trim(const std::string& str);
+std::string toUpper(const std::string& str);
 
 template<typename T>
 bool contains(const std::vector<T> &v, const T& value){
