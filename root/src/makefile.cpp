@@ -26,20 +26,15 @@ void Makefile::addRule(const std::string& name, const std::vector<std::string>& 
     ruleStream << std::endl;
 }
 
-void Makefile::addPhony(const std::string& name, const std::vector<std::string>& actions){
+void Makefile::addPhony(const std::string& name){
     phonyStream << ".PHONY : " << name << std::endl;
-    phonyStream << name << " : " << std::endl;
-    for(const std::string& a : actions){
-        phonyStream << "\t" << a << std::endl;
-    }
-    phonyStream << std::endl;
 }
 
 std::string Makefile::build() const{
     std::stringstream ss;
-    ss << varStream.str() << std::endl;
+    ss << varStream.str();
     ss << arrayStream.str() << std::endl;
-    ss << ruleStream.str() << std::endl;
+    ss << ruleStream.str();
     ss << phonyStream.str();
     return ss.str();
 }
