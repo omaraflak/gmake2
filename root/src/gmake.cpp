@@ -166,15 +166,18 @@ bool processCurrentPath(){
         }
 
         // object to compile
-        std::string objs_m = "OBJS_"+toUpper(fs::path(m).filename().stem());
+        std::string maincpp = fs::path(m).filename();
+        std::string main = fs::path(m).filename().stem();
+        std::string exec = options.find(maincpp)!=options.end()?options[maincpp]:options["executable"];
+        std::string objs_m = "OBJS_"+toUpper(main);
         std::vector<std::string> objs_compile;
         for(const auto& o : objs){
             objs_compile.push_back(fs::path(o.first)/o.second);
         }
         makefile.addArray(objs_m, objs_compile);
 
-        actions.push_back("$(CC) -o $(BIN)/$@ $("+objs_m+") $(CXXFLAGS)");
-        makefile.addRule(fs::path(m).stem(), deps2, actions);
+        actions.push_back("$(CC) -o $(BIN)/"+exec+" $("+objs_m+") $(CXXFLAGS)");
+        makefile.addRule(main, deps2, actions);
     }
 
     // mkdir bin
@@ -196,8 +199,9 @@ bool initGmake(){
     std::ofstream file(GMAKE);
     if(file){
         file << "compiler = g++" << std::endl;
-        file << "flags = -std=c++11" << std::endl;
-        file << "executable = main" << std::endl << std::endl;
+        file << "flags = -std=c++11" << std::endl << std::endl;
+        file << "# set the name of the executable generated with main.cpp" << std::endl;
+        file << "main.cpp = main" << std::endl << std::endl;
         file << "# add below the folders where should be generated makefiles..." << std::endl;
         file.close();
         return true;
