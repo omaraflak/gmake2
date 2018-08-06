@@ -1,25 +1,22 @@
 CC = g++-8
 BIN = bin
 CXXFLAGS = -std=c++17 -lstdc++fs
-PROG = gmake
-SUBMAKEFILES = submakefiles
 
-OBJS = $(wildcard ./root/obj/*.o)
-$(PROG) : $(BIN) $(SUBMAKEFILES)
-	$(CC) -o $(BIN)/$@ $(OBJS) $(CXXFLAGS)
+OBJS_GMAKE = ./root/obj/makefile.o ./root/obj/argument.o ./root/obj/tools.o ./root/obj/gmake.o 
 
-$(BIN) :
+all : gmake 
+
+gmake : $(BIN) ./root/include/gmake_options.h 
+	$(MAKE) -C ./root obj obj/makefile.o obj/argument.o obj/tools.o obj/gmake.o 
+	$(CC) -o $(BIN)/$@ $(OBJS_GMAKE) $(CXXFLAGS)
+
+$(BIN) : 
 	if [ ! -d $(BIN) ]; then mkdir $(BIN); fi
 
-.PHONY : $(SUBMAKEFILES)
-$(SUBMAKEFILES) :
-	$(MAKE) -C ./root
 
 .PHONY : clean
-clean :
+clean : 
 	$(MAKE) -C ./root clean
 	if [ -d $(BIN) ]; then rm $(BIN) -r; fi
 
-.PHONY : install
-install :
-	sudo cp $(BIN)/$(PROG) /bin/$(PROG)
+
