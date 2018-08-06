@@ -78,6 +78,7 @@ bool processCurrentPath(){
         std::vector<std::string> objs = getObjs(paths, "ODIR");
         makefile.addArray("OBJS", objs);
         makefile.addRule("all", {"$(ODIR)", "$(OBJS)"}, {});
+        makefile.addPhony("all");
 
         // compile *.cpp
         for(const fs::path& file : paths){
@@ -110,7 +111,8 @@ bool processCurrentPath(){
 
         // mkdir and rm obj/
         makefile.addRule("$(ODIR)", {}, {"if [ ! -d $(ODIR) ]; then mkdir $(ODIR); fi"});
-        makefile.addPhony("clean", {"if [ -d $(ODIR) ]; then rm $(ODIR) -r; fi"});
+        makefile.addRule("clean", {}, {"if [ -d $(ODIR) ]; then rm $(ODIR) -r; fi"});
+        makefile.addPhony("clean");
 
         // create makefile
         if(!writeMakefile(makefile, folderPath))
@@ -136,6 +138,7 @@ bool processCurrentPath(){
 
     // entry command
     makefile.addRule("all", mainsName, {});
+    makefile.addPhony("all");
 
     // entry for each main()
     for(const std::string& m : mains){
@@ -178,6 +181,7 @@ bool processCurrentPath(){
 
         actions.push_back("$(CC) -o $(BIN)/"+exec+" $("+objs_m+") $(CXXFLAGS)");
         makefile.addRule(main, deps2, actions);
+        makefile.addPhony(main);
     }
 
     // mkdir bin
@@ -189,7 +193,8 @@ bool processCurrentPath(){
         cleanSub.push_back("$(MAKE) -C "+folder+" clean");
     }
     cleanSub.push_back("if [ -d $(BIN) ]; then rm $(BIN) -r; fi");
-    makefile.addPhony("clean", cleanSub);
+    makefile.addRule("clean", {}, cleanSub);
+    makefile.addPhony("clean");
 
     // create main makefile
     return writeMakefile(makefile, root);
