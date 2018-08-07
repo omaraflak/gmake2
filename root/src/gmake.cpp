@@ -2,6 +2,7 @@
 #include <fstream>
 #include <utility>
 #include <map>
+#include <set>
 
 #include "../include/makefile.h"
 #include "../include/argument.h"
@@ -9,27 +10,34 @@
 
 static const std::string GMAKE = ".gmake";
 static const std::string OBJ = "obj";
+static const std::vector<std::string> EXT_HDR = {".hpp", ".h"};
 static const std::vector<std::string> EXT_SRC = {".cpp", ".c++", ".cxx", ".cp", ".cc", ".c"};
 
-bool getMainDependencies(const std::string& filename, const std::vector<std::string>& rootFolder, std::vector<std::pair<std::string, std::string> >& objs, std::vector<std::string>& deps){
-    std::vector<std::string> sources;
-    if(!readFileDeepDependencies(filename, sources)){
+bool getMainDependencies(const std::string& filename,
+        const std::vector<std::string>& rootFolder,
+        const std::map<std::string, std::set<std::string> >& hdrSrcMap,
+        std::vector<std::pair<std::string, std::string> >& objs,
+        std::vector<std::string>& deps){
+
+    std::vector<std::string> headers;
+    if(!readFileDeepDependencies(filename, headers)){
         return false;
     }
 
-    sources.push_back(filename);
+    headers.push_back(filename);
 
-    for(const std::string& src : sources){
+    for(const std::string& hdr : headers){
         for(const std::string root : rootFolder){
             std::string rootCan = fs::canonical(root);
-            if(startWith(src, rootCan)){
-                std::string filename = fs::path(src).stem().string()+".o";
-                fs::path objPath = fs::path(root).filename()/OBJ/filename;
-                if(fs::exists(objPath)){
+            if(startWith(hdr, rootCan)){
+                std::string stem = fs::path(hdr).stem();
+                std::set<std::string> src = hdrSrcMap.find(hdr)!=hdrSrcMap.end()?hdrSrcMap.at(hdr):std::set<std::string>();
+                if(src.find(stem)!=src.end()){
+                    std::string filename = stem+".o";
                     objs.push_back(std::make_pair(root, OBJ+"/"+filename));
                 }
                 else{
-                    deps.push_back(root/fs::relative(src, root));
+                    deps.push_back(root/fs::relative(hdr, root));
                 }
             }
         }
@@ -49,17 +57,25 @@ std::vector<std::string> getObjs(const std::vector<fs::path>& src, const std::st
 bool processCurrentPath(){
     // read options in .gmake file
     GmakeOptions gmake;
-    readGmake(GMAKE, gmake);
+    if(!readGmake(GMAKE, gmake)){
+        return false;
+    }
 
+    // get data from .gmake
     std::vector<std::string> folders = gmake.folders;
     std::map<std::string, std::string> options = gmake.options;
     fs::path root = fs::current_path();
 
     // main() files
-    std::vector<std::string> mains;
+    std::vector<std::string> mainFiles, mainNames;
     bool isMain;
 
-    // generate submakefiles
+    // header / sources map
+    std::map<std::string, std::set<std::string> > headerSourcesMap;
+
+    /////////////////////////////////////////
+    //////////////SubMakefiles///////////////
+    /////////////////////////////////////////
     for(const std::string& folder : folders){
         Makefile makefile;
         makefile.addVar("CC", options["compiler"]);
@@ -72,16 +88,17 @@ bool processCurrentPath(){
 
         // get files in current folder
         std::vector<fs::path> files = listdir(".");
-        std::vector<fs::path> paths = filterPath(files, EXT_SRC);
+        std::vector<fs::path> sources = filterPath(files, EXT_SRC);
+        std::vector<fs::path> headers = filterPath(files, EXT_HDR);
 
         // first command (all)
-        std::vector<std::string> objs = getObjs(paths, "ODIR");
+        std::vector<std::string> objs = getObjs(sources, "ODIR");
         makefile.addArray("OBJS", objs);
         makefile.addRule("all", {"$(ODIR)", "$(OBJS)"}, {});
         makefile.addPhony("all");
 
         // compile *.cpp
-        for(const fs::path& file : paths){
+        for(const fs::path& file : sources){
             std::string filename = file.filename();
 
             // enter parent folder of file
@@ -90,13 +107,21 @@ bool processCurrentPath(){
 
             // get all includes from file
             std::vector<std::string> dependencies = {filename};
-            readFileDependencies(filename, dependencies, &isMain);
-            if(isMain){
-                mains.push_back(fs::canonical(filename));
+            if(!readFileDependencies(filename, dependencies, &isMain)){
+                return false;
             }
 
+            if(isMain){
+                fs::path p(filename);
+                mainFiles.push_back(fs::canonical(p));
+                mainNames.push_back(p.stem());
+                options[filename] = p.stem();
+            }
+
+            // fill header / sources map
             // set relative path to absolute path
             for(std::string& dep : dependencies){
+                headerSourcesMap[fs::canonical(dep)].insert(fs::path(filename).stem());
                 dep = fs::relative(fs::canonical(dep), folderPath);
             }
 
@@ -122,29 +147,23 @@ bool processCurrentPath(){
         fs::current_path(root);
     }
 
-    // generate main makefile
+    /////////////////////////////////////////
+    ////////////////Makefile/////////////////
+    /////////////////////////////////////////
     Makefile makefile;
     makefile.addVar("CC", options["compiler"]);
     makefile.addVar("BIN", options["output"]);
     makefile.addVar("CXXFLAGS", options["flags"]);
 
-    // set executable name
-    std::vector<std::string> mainsName;
-    for(const std::string& m : mains){
-        fs::path p(m);
-        options[p.filename()] = p.stem();
-        mainsName.push_back(p.stem());
-    }
-
     // entry command
-    makefile.addRule("all", mainsName, {});
+    makefile.addRule("all", mainNames, {});
     makefile.addPhony("all");
 
     // entry for each main()
-    for(const std::string& m : mains){
+    for(const std::string& m : mainFiles){
         std::vector<std::pair<std::string, std::string> > objs;
         std::vector<std::string> deps, deps2, actions;
-        if(!getMainDependencies(m, folders, objs, deps)){
+        if(!getMainDependencies(m, folders, headerSourcesMap, objs, deps)){
             return false;
         }
 
