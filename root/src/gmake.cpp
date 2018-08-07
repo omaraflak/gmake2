@@ -10,7 +10,6 @@
 
 static const std::string GMAKE = ".gmake";
 static const std::string OBJ = "obj";
-static const std::vector<std::string> EXT_HDR = {".hpp", ".h"};
 static const std::vector<std::string> EXT_SRC = {".cpp", ".c++", ".cxx", ".cp", ".cc", ".c"};
 
 bool getMainDependencies(const std::string& filename,
@@ -89,7 +88,6 @@ bool processCurrentPath(){
         // get files in current folder
         std::vector<fs::path> files = listdir(".");
         std::vector<fs::path> sources = filterPath(files, EXT_SRC);
-        std::vector<fs::path> headers = filterPath(files, EXT_HDR);
 
         // first command (all)
         std::vector<std::string> objs = getObjs(sources, "ODIR");
