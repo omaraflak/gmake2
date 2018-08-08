@@ -13,6 +13,7 @@ struct GmakeOptions {
     GmakeOptions(){
         options["compiler"] = "g++";
         options["flags"] = "-Wall -Wextra -std=c++11";
+        options["libs"] = "";
         options["executable"] = "main";
         options["output"] = "bin";
     }
