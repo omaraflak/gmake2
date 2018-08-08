@@ -77,7 +77,7 @@ bool processCurrentPath(){
     /////////////////////////////////////////
     for(const std::string& folder : folders){
         Makefile makefile;
-        makefile.addVar("CC", options["compiler"]);
+        makefile.addVar("CXX", options["compiler"]);
         makefile.addVar("ODIR", OBJ);
         makefile.addVar("CXXFLAGS", options["flags"]);
 
@@ -125,7 +125,7 @@ bool processCurrentPath(){
 
             // write rule
             std::string obj = file.stem().string()+".o";
-            std::string compile = "$(CC) -c $< -o $@ $(CXXFLAGS)";
+            std::string compile = "$(CXX) -c $< -o $@ $(CXXFLAGS)";
             makefile.addRule("$(ODIR)/"+obj, dependencies, {compile});
 
             // go back to folder
@@ -149,9 +149,9 @@ bool processCurrentPath(){
     ////////////////Makefile/////////////////
     /////////////////////////////////////////
     Makefile makefile;
-    makefile.addVar("CC", options["compiler"]);
+    makefile.addVar("CXX", options["compiler"]);
     makefile.addVar("BIN", options["output"]);
-    makefile.addVar("CXXFLAGS", options["flags"]);
+    makefile.addVar("LIBS", options["libs"]);
 
     // entry command
     makefile.addRule("all", mainNames, {});
@@ -196,7 +196,7 @@ bool processCurrentPath(){
         }
         makefile.addArray(objs_m, objs_compile);
 
-        actions.push_back("$(CC) -o $(BIN)/"+exec+" $("+objs_m+") $(CXXFLAGS)");
+        actions.push_back("$(CXX) -o $(BIN)/"+exec+" $("+objs_m+") $(LIBS)");
         makefile.addRule(main, deps2, actions);
         makefile.addPhony(main);
     }
