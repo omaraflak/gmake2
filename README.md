@@ -9,6 +9,7 @@ Different variables are available :
 
 * compiler
 * flags
+* libs
 * output
 
 Inside this file you should also write down the folders where submakefiles should be generated.
@@ -19,9 +20,9 @@ Once done, simply run `gmake`.
 
 ```
 compiler = g++-8
-flags = -std=c++17 -lstdc++fs
+flags = -std=c++17
+libs = -lstdc++fs
 gmake.cpp = gmake
 output = bin
-
 ./root
 ```
