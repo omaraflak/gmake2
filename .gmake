@@ -1,5 +1,6 @@
 compiler = g++-8
-flags = -std=c++17 -lstdc++fs
+flags = -std=c++17
+libs = -lstdc++fs
 
 # executable name
 gmake.cpp = gmake
